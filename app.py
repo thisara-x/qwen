@@ -18,6 +18,9 @@ from huggingface_hub import login
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import logging, ngrok
 import time 
+VOICE_GENERATION = None
+VOICE_PATH = None
+
 
 app = Flask(__name__)
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -292,10 +295,12 @@ def generate_custom_voice(text, language, speaker, instruct, model_size, remove_
         return None, f"Error: {e}", None, None, None, None
 
 
-VOICE_GENERATION = None
-VOICE_PATH = None
+
 def smart_generate_clone(ref_audio, ref_text, target_text, language, mode, model_size, remove_silence, make_subs):
+    global VOICE_GENERATION, VOICE_PATH
+    print("START TO GENERATE VOICE")
     VOICE_GENERATION = False
+    
     if not target_text or not target_text.strip(): return None, "Error: Target text is required.", None, None, None, None
     if not ref_audio: return None, "Error: Ref audio required.", None, None, None, None
 
@@ -347,6 +352,7 @@ def smart_generate_clone(ref_audio, ref_text, target_text, language, mode, model
         final_audio, srt1, srt2, srt3, srt4 = process_audio_output(stitched_file, make_subs, remove_silence, language)
         VOICE_GENERATION = True
         VOICE_PATH = final_audio
+        print("VOICE GENERATION IS COMPLETED")
         return final_audio, f"Success! Mode: {mode}", srt1, srt2, srt3, srt4
 
     except Exception as e:
@@ -374,7 +380,12 @@ def clone_voice():
 
 @app.route("/download")
 def voice_download():
-    while VOICE_GENERATION is None or VOICE_GENERATION is False:
+    if VOICE_GENERATION is None:
+        
+        return "Voice no created"
+
+    while VOICE_GENERATION is False:
+        print("AUDIO CREATING IS PENDDING!")
         time.sleep(3)
     return send_file(VOICE_PATH)
 
