@@ -1,4 +1,5 @@
 # %cd /content/Qwen3-TTS-Colab
+from flask import Flask,request
 from subtitle import subtitle_maker
 from process_text import text_chunk
 from qwen_tts import Qwen3TTSModel
@@ -342,193 +343,18 @@ def smart_generate_clone(ref_audio, ref_text, target_text, language, mode, model
         return None, f"Error: {e}", None, None, None, None
 
 
-# --- UI Construction ---
+ref_text = "Code complexity versus code simplicity. Many intermediate and beginner programmers make this mistake. They try to create professional code by using every concept they have learned. But professionalism is not about using more concepts. It is about making code easy to understand and easy to update. You may think design patterns and advanced concepts always help, but that is not completely true. Most programming concepts are actually created to simplify complex code, not to make simple code even more complex. This is called over-engineering. For example, if you want to reach a destination and have two paths, one is two miles and the other is four miles, which path would you choose? Every programmer should think about how to write code with minimum complexity. Use programming concepts only when they are really necessary."
 
-def on_mode_change(mode):
-    return gr.update(visible=("High-Quality" in mode))
+result =smart_generate_clone("ref.wav",
+                    ref_text,
+                    "hello thisara",
+                    "English",
+                    False,
+                    "1.7B",
+                    False,
+                    False)
 
-def build_ui():
-    theme = gr.themes.Soft(font=[gr.themes.GoogleFont("Source Sans Pro"), "Arial", "sans-serif"])
-    css = ".gradio-container {max-width: none !important;} .tab-content {padding: 20px;}"
-
-    with gr.Blocks(theme=theme, css=css, title="Qwen3-TTS Demo") as demo:
-        gr.HTML("""
-        <div style="text-align: center; margin: 20px auto; max-width: 800px;">
-            <h1 style="font-size: 2.5em; margin-bottom: 5px;">🎙️ Qwen3-TTS </h1>
-            <a href="https://colab.research.google.com/github/NeuralFalconYT/Qwen3-TTS-Colab/blob/main/Qwen3_TTS_Colab.ipynb" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #4285F4; color: white; border-radius: 6px; text-decoration: none; font-size: 1em;">🥳 Run on Google Colab</a>
-        </div>""")
-
-        with gr.Tabs():
-            # --- Tab 1: Voice Design ---
-            with gr.Tab("Voice Design"):
-                with gr.Row():
-                    with gr.Column(scale=2):
-                        design_text = gr.Textbox(label="Text to Synthesize", lines=4, value="It's in the top drawer... wait, it's empty? No way, that's impossible! I'm sure I put it there!",
-                                                 placeholder="Enter the text you want to convert to speech...")
-                        design_language = gr.Dropdown(label="Language", choices=LANGUAGES, value="Auto")
-                        design_instruct = gr.Textbox(label="Voice Description", lines=3,  placeholder="Describe the voice characteristics you want...",
-                            value="Speak in an incredulous tone, but with a hint of panic beginning to creep into your voice.")
-                        design_btn = gr.Button("Generate with Custom Voice", variant="primary")
-                        with gr.Accordion("More options", open=False):
-                            with gr.Row():
-                              design_rem_silence = gr.Checkbox(label="Remove Silence", value=False)
-                              design_make_subs = gr.Checkbox(label="Generate Subtitles", value=False)
-                        
-                        
-
-                    with gr.Column(scale=2):
-                        design_audio_out = gr.Audio(label="Generated Audio", type="filepath")
-                        design_status = gr.Textbox(label="Status", interactive=False)
-                        
-                        with gr.Accordion("📝 Subtitles", open=False):
-                            with gr.Row():
-                                d_srt1 = gr.File(label="Original (Whisper)")
-                                d_srt2 = gr.File(label="Readable")
-                            with gr.Row():
-                                d_srt3 = gr.File(label="Word-level")
-                                d_srt4 = gr.File(label="Shorts/Reels")
-
-                design_btn.click(
-                    generate_voice_design, 
-                    inputs=[design_text, design_language, design_instruct, design_rem_silence, design_make_subs], 
-                    outputs=[design_audio_out, design_status, d_srt1, d_srt2, d_srt3, d_srt4]
-                )
-
-            # --- Tab 2: Voice Clone ---
-            with gr.Tab("Voice Clone (Base)"):
-                with gr.Row():
-                    with gr.Column(scale=2):
-                        clone_target_text = gr.Textbox(label="Target Text", lines=3, placeholder="Enter the text you want the cloned voice to speak...")
-                        clone_ref_audio = gr.Audio(label="Reference Audio (Upload a voice sample to clone)", type="filepath")
-                        
-                        with gr.Row():
-                            clone_language = gr.Dropdown(label="Language", choices=LANGUAGES, value="Auto",scale=1)
-                            clone_model_size = gr.Dropdown(label="Model Size", choices=MODEL_SIZES, value="1.7B",scale=1)
-                            clone_mode = gr.Dropdown(
-                                label="Mode",
-                                choices=["High-Quality (Audio + Transcript)", "Fast (Audio Only)"],
-                                value="High-Quality (Audio + Transcript)",
-                                interactive=True,
-                                scale=2
-                            )
-                        
-                        clone_ref_text = gr.Textbox(label="Reference Text", lines=2, visible=True)
-                        clone_btn = gr.Button("Clone & Generate", variant="primary")
-                        with gr.Accordion("More options", open=False):
-                            with gr.Row():
-                              clone_rem_silence = gr.Checkbox(label="Remove Silence", value=False)
-                              clone_make_subs = gr.Checkbox(label="Generate Subtitles", value=False)
-
-                        
-
-                    with gr.Column(scale=2):
-                        clone_audio_out = gr.Audio(label="Generated Audio", type="filepath")
-                        clone_status = gr.Textbox(label="Status", interactive=False)
-                        
-                        with gr.Accordion("📝 Subtitles", open=False):
-                            with gr.Row():
-                                c_srt1 = gr.File(label="Original")
-                                c_srt2 = gr.File(label="Readable")
-                            with gr.Row():
-                                c_srt3 = gr.File(label="Word-level")
-                                c_srt4 = gr.File(label="Shorts/Reels")
-
-                clone_mode.change(on_mode_change, inputs=[clone_mode], outputs=[clone_ref_text])
-                clone_ref_audio.change(transcribe_reference, inputs=[clone_ref_audio, clone_mode, clone_language], outputs=[clone_ref_text])
-                
-                clone_btn.click(
-                    smart_generate_clone,
-                    inputs=[clone_ref_audio, clone_ref_text, clone_target_text, clone_language, clone_mode, clone_model_size, clone_rem_silence, clone_make_subs],
-                    outputs=[clone_audio_out, clone_status, c_srt1, c_srt2, c_srt3, c_srt4]
-                )
-
-            # --- Tab 3: TTS (CustomVoice) ---
-            with gr.Tab("TTS (CustomVoice)"):
-                with gr.Row():
-                    with gr.Column(scale=2):
-                        tts_text = gr.Textbox(label="Text", lines=4,   placeholder="Enter the text you want to convert to speech...",
-                            value="Hello! Welcome to Text-to-Speech system. This is a demo of our TTS capabilities.")
-                        with gr.Row():
-                            tts_language = gr.Dropdown(label="Language", choices=LANGUAGES, value="English")
-                            tts_speaker = gr.Dropdown(label="Speaker", choices=SPEAKERS, value="Ryan")
-                        with gr.Row():
-                            tts_instruct = gr.Textbox(label="Style Instruction (Optional)", lines=2,placeholder="e.g., Speak in a cheerful and energetic tone")
-                            tts_model_size = gr.Dropdown(label="Size", choices=MODEL_SIZES, value="1.7B")
-                        tts_btn = gr.Button("Generate Speech", variant="primary")
-                        with gr.Accordion("More options", open=False):
-                            with gr.Row():
-                              tts_rem_silence = gr.Checkbox(label="Remove Silence", value=False)
-                              tts_make_subs = gr.Checkbox(label="Generate Subtitles", value=False)
-                            
-                        
-
-                    with gr.Column(scale=2):
-                        tts_audio_out = gr.Audio(label="Generated Audio", type="filepath")
-                        tts_status = gr.Textbox(label="Status", interactive=False)
-                        
-                        with gr.Accordion("📝 Subtitles", open=False):
-                            with gr.Row():
-                                t_srt1 = gr.File(label="Original")
-                                t_srt2 = gr.File(label="Readable")
-                            with gr.Row():
-                                t_srt3 = gr.File(label="Word-level")
-                                t_srt4 = gr.File(label="Shorts/Reels")
-
-                tts_btn.click(
-                    generate_custom_voice, 
-                    inputs=[tts_text, tts_language, tts_speaker, tts_instruct, tts_model_size, tts_rem_silence, tts_make_subs], 
-                    outputs=[tts_audio_out, tts_status, t_srt1, t_srt2, t_srt3, t_srt4]
-                )
-            # --- Tab 4: About ---
-            with gr.Tab("About"):
-                gr.Markdown("""
-                # Qwen3-TTS 
-                A unified Text-to-Speech demo featuring three powerful modes:
-                - **Voice Design**: Create custom voices using natural language descriptions
-                - **Voice Clone (Base)**: Clone any voice from a reference audio
-                - **TTS (CustomVoice)**: Generate speech with predefined speakers and optional style instructions
-
-                Built with [Qwen3-TTS](https://github.com/QwenLM/Qwen3-TTS) by Alibaba Qwen Team.
-                """)
-
-                gr.HTML("""
-                <hr>
-                <p style="color: red; font-weight: bold; font-size: 16px;">
-                ⚠️ NOTE
-                </p>
-                <p>
-                This Gradio UI is not affiliated with the official Qwen3-TTS project and is based on the
-                official Qwen3-TTS demo UI:<br>
-                <a href="https://huggingface.co/spaces/Qwen/Qwen3-TTS" target="_blank">
-                https://huggingface.co/spaces/Qwen/Qwen3-TTS
-                </a>
-                </p>
-
-                <p><b>Additional features:</b></p>
-                <ul>
-                  <li>Automatic transcription support using faster-whisper-large-v3-turbo-ct2</li>
-                  <li>Long text input support</li>
-                  <li>Because we are using Whisper, subtitles are also added</li>
-                </ul>
-                """)
-
-             
-    return demo
-
-# if __name__ == "__main__":
-#     demo = build_ui()
-#     demo.launch(share=True, debug=True)
-
-
-
-import click
-@click.command()
-@click.option("--debug", is_flag=True, default=False, help="Enable debug mode.")
-@click.option("--share", is_flag=True, default=False, help="Enable sharing of the interface.")
-def main(share,debug):
-    demo = build_ui()
-    # demo.launch(share=True, debug=True)
-    demo.queue().launch(share=share,debug=debug)
+print("THIS IS PATH OF CREATED AUDIO --->  ",result[0])
 
 if __name__ == "__main__":
-    main()    
+    pass
