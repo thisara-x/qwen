@@ -349,7 +349,7 @@ result =smart_generate_clone("ref.wav",
                     ref_text,
                     "hello thisara",
                     "English",
-                    False,
+                    "false",
                     "1.7B",
                     False,
                     False)
