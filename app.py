@@ -17,6 +17,7 @@ import gc
 from huggingface_hub import login
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import logging, ngrok
+import time 
 
 app = Flask(__name__)
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -290,7 +291,11 @@ def generate_custom_voice(text, language, speaker, instruct, model_size, remove_
     except Exception as e:
         return None, f"Error: {e}", None, None, None, None
 
+
+VOICE_GENERATION = None
+VOICE_PATH = None
 def smart_generate_clone(ref_audio, ref_text, target_text, language, mode, model_size, remove_silence, make_subs):
+    VOICE_GENERATION = False
     if not target_text or not target_text.strip(): return None, "Error: Target text is required.", None, None, None, None
     if not ref_audio: return None, "Error: Ref audio required.", None, None, None, None
 
@@ -340,6 +345,8 @@ def smart_generate_clone(ref_audio, ref_text, target_text, language, mode, model
         # 4. Stitch & Process
         stitched_file = stitch_chunk_files(chunk_files,tts_filename)
         final_audio, srt1, srt2, srt3, srt4 = process_audio_output(stitched_file, make_subs, remove_silence, language)
+        VOICE_GENERATION = True
+        VOICE_PATH = final_audio
         return final_audio, f"Success! Mode: {mode}", srt1, srt2, srt3, srt4
 
     except Exception as e:
@@ -349,31 +356,7 @@ def smart_generate_clone(ref_audio, ref_text, target_text, language, mode, model
 
 
 ref_text = "Code complexity versus code simplicity. Many intermediate and beginner programmers make this mistake. They try to create professional code by using every concept they have learned. But professionalism is not about using more concepts. It is about making code easy to understand and easy to update. You may think design patterns and advanced concepts always help, but that is not completely true. Most programming concepts are actually created to simplify complex code, not to make simple code even more complex. This is called over-engineering. For example, if you want to reach a destination and have two paths, one is two miles and the other is four miles, which path would you choose? Every programmer should think about how to write code with minimum complexity. Use programming concepts only when they are really necessary."
-@app.route("/")
-def main():
-  smart_generate_clone("ref.wav",
-                    ref_text,
-                    "Hey thisara is falier",
-                    "English",
-                    "False",
-                    "1.7B",
-                    False,
-                    False)
-  return "I think it is created"
 
-smart_generate_clone("ref.wav",
-                    ref_text,
-                    "this is a checkup",
-                    "English",
-                    "False",
-                    "1.7B",
-                    False,
-                    False)
-
-
-
-
-'''
 @app.route("/clone", methods= ["POST"])
 def clone_voice():
     data =  request.get_json()
@@ -387,10 +370,23 @@ def clone_voice():
                     "1.7B",
                     False,
                     False)
-    return send_file(result[0])
-'''
+    return "OK"
+
+@app.route("/download")
+def voice_download():
+    while VOICE_GENERATION is None or VOICE_GENERATION is False:
+        time.sleep(3)
+    return send_file(VOICE_PATH)
 
 
+smart_generate_clone("ref.wav",
+                    ref_text,
+                    "this is a checkup",
+                    "English",
+                    "False",
+                    "1.7B",
+                    False,
+                    False)
 
 if __name__ == "__main__":
     ngrok.set_auth_token("2lvy8rzHNxKwQMttNAQjhb7HQuc_2qSoM1VRKsHE1xksBqsMj")
