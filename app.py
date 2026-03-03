@@ -18,6 +18,7 @@ from huggingface_hub import login
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import logging, ngrok
 
+app = Flask(__name__)
 HF_TOKEN = os.getenv("HF_TOKEN")
 if HF_TOKEN:
     login(token=HF_TOKEN)
@@ -365,7 +366,8 @@ def clone_voice():
 
 
 if __name__ == "__main__":
+    ngrok.set_auth_token("2lvy8rzHNxKwQMttNAQjhb7HQuc_2qSoM1VRKsHE1xksBqsMj")
     public_url = ngrok.connect(5000)
-    print("Public URL:", public_url)
+    print("Public URL:", public_url.url())
 
     app.run(port=5000)
