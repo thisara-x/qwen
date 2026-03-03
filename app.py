@@ -1,5 +1,5 @@
 # %cd /content/Qwen3-TTS-Colab
-from flask import Flask,request
+from flask import Flask,request,send_file
 from subtitle import subtitle_maker
 from process_text import text_chunk
 from qwen_tts import Qwen3TTSModel
@@ -15,6 +15,8 @@ from huggingface_hub import snapshot_download
 from hf_downloader import download_model
 import gc 
 from huggingface_hub import login
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import logging, ngrok
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 if HF_TOKEN:
@@ -345,16 +347,25 @@ def smart_generate_clone(ref_audio, ref_text, target_text, language, mode, model
 
 ref_text = "Code complexity versus code simplicity. Many intermediate and beginner programmers make this mistake. They try to create professional code by using every concept they have learned. But professionalism is not about using more concepts. It is about making code easy to understand and easy to update. You may think design patterns and advanced concepts always help, but that is not completely true. Most programming concepts are actually created to simplify complex code, not to make simple code even more complex. This is called over-engineering. For example, if you want to reach a destination and have two paths, one is two miles and the other is four miles, which path would you choose? Every programmer should think about how to write code with minimum complexity. Use programming concepts only when they are really necessary."
 
-result =smart_generate_clone("ref.wav",
+@app.route("/clone", methods= ["POST"])
+def clone_voice():
+    data =  request.get_json()
+    text =  data.get("text")
+    
+    result =smart_generate_clone("ref.wav",
                     ref_text,
-                    "hello thisara",
+                    text,
                     "English",
-                    "false",
+                    "False",
                     "1.7B",
                     False,
                     False)
+    return send_file(result[0])
 
-print("THIS IS PATH OF CREATED AUDIO --->  ",result[0])
+
 
 if __name__ == "__main__":
-    pass
+    public_url = ngrok.connect(5000)
+    print("Public URL:", public_url)
+
+    app.run(port=5000)
