@@ -347,7 +347,16 @@ def smart_generate_clone(ref_audio, ref_text, target_text, language, mode, model
 
 
 ref_text = "Code complexity versus code simplicity. Many intermediate and beginner programmers make this mistake. They try to create professional code by using every concept they have learned. But professionalism is not about using more concepts. It is about making code easy to understand and easy to update. You may think design patterns and advanced concepts always help, but that is not completely true. Most programming concepts are actually created to simplify complex code, not to make simple code even more complex. This is called over-engineering. For example, if you want to reach a destination and have two paths, one is two miles and the other is four miles, which path would you choose? Every programmer should think about how to write code with minimum complexity. Use programming concepts only when they are really necessary."
+smart_generate_clone("ref.wav",
+                    ref_text,
+                    "Hey thisara is falier",
+                    "English",
+                    "False",
+                    "1.7B",
+                    False,
+                    False)
 
+'''
 @app.route("/clone", methods= ["POST"])
 def clone_voice():
     data =  request.get_json()
@@ -370,4 +379,4 @@ if __name__ == "__main__":
     public_url = ngrok.connect(5000)
     print("Public URL:", public_url.url())
 
-    app.run(port=5000)
+    app.run(port=5000)'''
